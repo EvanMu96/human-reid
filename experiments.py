@@ -10,6 +10,7 @@ import cv2
 from torch.utils.data import Dataset, DataLoader
 from torchvision import utils
 from torch.nn import functional as F
+from torch.autograd import Variable
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 
@@ -88,6 +89,27 @@ def train_arc(model, criterion, criterion_arc, optimizer, trainloader, use_gpu, 
             print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f'
                     % (epoch, batch_idx, loss.item(), trainloss / (batch_idx + 1)))   
 
+def train_sphere(model, criterion_sphere, optimizer_model, trainloader, use_gpu, epoch):
+    model.train()
+    model.feature = False
+    trainloss = 0
+
+    for batch_idx, (data, labels) in enumerate(trainloader):
+        if use_gpu:
+            data, labels = data.cuda(), labels.cuda()
+        features, outputs = model(data)
+        loss = criterion_sphere(outputs, labels)
+
+        optimizer_model.zero_grad()
+        loss.backward()
+        optimizer_model.step()
+
+        trainloss += loss.item()
+
+        if batch_idx % 10 == 0:
+            print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f'
+                    % (epoch, batch_idx, loss.item(), trainloss / (batch_idx + 1)))
+
 """
 center loss, ECCV 2016, the full loss should be centerloss + softmaxloss    
 """     
@@ -151,6 +173,43 @@ class Arcface(nn.Module):
         output[idx_, label] = cos_theta_m[idx_, label]
         output *= self.s # scale up in order to make softmax work, first introduced in normface
         return output
+
+"""
+Angle Loss
+"""
+class AngleLoss(nn.Module):
+    def __init__(self, gamma=0):
+        super(AngleLoss, self).__init__()
+        self.gamma   = gamma
+        self.it = 0
+        self.LambdaMin = 5.0
+        self.LambdaMax = 1500.0
+        self.lamb = 1500.0
+
+    def forward(self, input, target):
+        self.it += 1
+        cos_theta,phi_theta = input
+        target = target.view(-1,1) #size=(B,1)
+
+        index = cos_theta.data * 0.0 #size=(B,Classnum)
+        index.scatter_(1,target.data.view(-1,1),1)
+        index = index.byte()
+        index = Variable(index)
+
+        self.lamb = max(self.LambdaMin,self.LambdaMax/(1+0.1*self.it ))
+        output = cos_theta * 1.0 #size=(B,Classnum)
+        output[index] -= cos_theta[index]*(1.0+0)/(1+self.lamb)
+        output[index] += phi_theta[index]*(1.0+0)/(1+self.lamb)
+
+        logpt = F.log_softmax(output)
+        logpt = logpt.gather(1,target)
+        logpt = logpt.view(-1)
+        pt = Variable(logpt.data.exp())
+
+        loss = -1 * (1-pt)**self.gamma * logpt
+        loss = loss.mean()
+
+        return loss
 
 """
 this kernel does not work
