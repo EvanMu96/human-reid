@@ -41,7 +41,7 @@ def train_softmax(model, criterion, optimizer, trainloader, use_gpu, epoch, num_
             print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f'
                     % (epoch, batch_idx, loss.item(), trainloss / (batch_idx + 1)))
 
-def train_centerloss(model, criterion_xent, criterion_cent, optimizer_model, optimizer_centloss, trainloader, use_gpu, epoch):
+def train_centerloss(model, criterion_xent, criterion_cent, optimizer_model, optimizer_centloss, trainloader, use_gpu, epoch, coeff=0.005):
     model.train()
     model.feature = False
     trainloss = 0
@@ -53,7 +53,7 @@ def train_centerloss(model, criterion_xent, criterion_cent, optimizer_model, opt
 
         loss_xent = criterion_xent(outputs, labels)
         loss_cent = criterion_cent(features, labels)
-        loss = loss_xent + 0.0001*loss_cent
+        loss = loss_xent + coeff*loss_cent
 
         optimizer_model.zero_grad()
         optimizer_centloss.zero_grad()
@@ -185,6 +185,9 @@ def eval_acc(threshold, diff):
     accuracy = 1.0*np.count_nonzero(y_true==y_predict)/len(y_true)
     return accuracy
 
+"""
+not recommend, only used for NN classification
+"""
 def evaluate_pure_pytorch(model, testloader, use_gpu, epoch):
     model.eval()
     model.feature = False
@@ -304,6 +307,7 @@ def evaluate_identification(model, trainloader, testloader, use_gpu, epoch):
     labels_pred = svm_model.predict(test_features)
     #scores = svm_model.predict_proba(test_features)
     #scores_max = scores[range(len(scores)), scores.argmax(axis=1)]
-    acc = np.sum(np.array(labels_pred) == np.array(test_labels)) / len(test_labels)
-    print('epoch= %d, svm classification accuracy: %.4f' % (epoch, acc))
-    return acc
+    acc_test = np.sum(np.array(labels_pred) == np.array(test_labels)) / len(test_labels)
+
+    print('epoch= %d, svm classification accuracy: %.4f' % (epoch, acc_test))
+    return acc_test
