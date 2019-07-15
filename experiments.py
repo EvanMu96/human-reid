@@ -18,6 +18,7 @@ def dt():
 
 def l2_norm(input,axis=1):
     norm = torch.norm(input,2,axis,True)+(1e-12)
+    print(norm)
     output = torch.div(input, norm)
     return output
 
