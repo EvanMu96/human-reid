@@ -17,7 +17,7 @@ def dt():
     return datetime.datetime.now().strftime('%H:%M:%S')
 
 def l2_norm(input,axis=1):
-    norm = torch.norm(input,2,axis,True)
+    norm = torch.norm(input,2,axis,True)+(1e-12)
     output = torch.div(input, norm)
     return output
 
