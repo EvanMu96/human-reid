@@ -54,13 +54,14 @@ def train_softmax_l2(model, criterion, optimizer, trainloader, use_gpu, epoch, n
             data, labels = data.cuda(), labels.cuda()
 
         _, outputs = model(data)
-        loss = criterion(outputs, labels)
+        for p in model.parameters():
+            l2loss += p.abs().sum()
+        loss = criterion(outputs, labels) + l2loss
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        for p in model.parameters():
-            l2loss += p.abs().sum()
-        trainloss += loss.item() + l2loss
+
+        trainloss += loss.item() 
         
         if batch_idx % 10 == 0:
             print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f'
@@ -91,7 +92,37 @@ def train_centerloss(model, criterion_xent, criterion_cent, optimizer_model, opt
         if batch_idx % 10 == 0:
             print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f, loss_xent=%.4f, loss_centws=%.4f'
                     % (epoch, batch_idx, loss.item(), trainloss / (batch_idx + 1), loss_xent.item(), loss_cent.item()))
-            
+
+def train_centerloss(model, criterion_xent, criterion_cent, optimizer_model, optimizer_centloss, trainloader, use_gpu, epoch, coeff=0.005):
+    model.train()
+    model.feature = False
+    trainloss = 0
+    l2loss = 0
+    for batch_idx, (data, labels) in enumerate(trainloader):
+        if use_gpu:
+            data, labels = data.cuda(), labels.cuda()
+
+        features, outputs = model(data)
+
+        loss_xent = criterion_xent(outputs, labels)
+        loss_cent = criterion_cent(features, labels)
+        for p in model.parameters():
+            l2loss += p.abs().sum()
+        loss = loss_xent + coeff*loss_cent + l2loss
+
+        optimizer_model.zero_grad()
+        optimizer_centloss.zero_grad()
+        loss.backward()
+        optimizer_model.step()
+        optimizer_centloss.step()
+
+
+        trainloss += loss.item()
+
+        if batch_idx % 10 == 0:
+            print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f, loss_xent=%.4f, loss_centws=%.4f'
+                    % (epoch, batch_idx, loss.item(), trainloss / (batch_idx + 1), loss_xent.item(), loss_cent.item()))
+
 def train_arc(model, criterion, criterion_arc, optimizer, trainloader, use_gpu, epoch, num_classes):
     model.train()
     model.feature = False
