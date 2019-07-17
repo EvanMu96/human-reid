@@ -83,9 +83,7 @@ def train_centerloss(model, criterion_xent, criterion_cent, optimizer_model, opt
 
         loss_xent = criterion_xent(outputs, labels)
         loss_cent = criterion_cent(features, labels)
-        for p in model.parameters():
-            l2loss += p.abs().sum()
-        loss = loss_xent + coeff*loss_cent + l2loss
+        loss = loss_xent + coeff*loss_cent 
 
         optimizer_model.zero_grad()
         optimizer_centloss.zero_grad()
