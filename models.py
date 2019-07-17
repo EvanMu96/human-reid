@@ -17,7 +17,7 @@ Baseline model settting: LeNet++ described in the Center Loss paper
 class ConvNet(nn.Module):
     """LeNet++ as described in the Center Loss paper."""
 
-    def __init__(self, num_classes=25, feature_dim=64, use_bn=False):
+    def __init__(self, num_classes=28, feature_dim=64, use_bn=True):
         super(ConvNet, self).__init__()
         self.feature = False
         self.use_bn = use_bn
@@ -104,7 +104,7 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, vgg_name, num_classes):
+    def __init__(self, vgg_name='VGG16', num_classes=28):
         super(VGG, self).__init__()
         self.features = self._make_layers(cfg[vgg_name])
         self.reg = nn.Dropout(0.5)
@@ -116,10 +116,11 @@ class VGG(nn.Module):
     def forward(self, x):
         out = self.features(x)
         out = out.view(out.size(0), -1)
+        out = self.reg(out)
         if self.feature:
             return out
         else:
-            return out, self.classifier(self.reg(out))
+            return out, self.classifier(out)
     
     def _make_layers(self, cfg):
         layers = []
@@ -140,9 +141,38 @@ class VGG(nn.Module):
         layers += [nn.Conv2d(512, 64, kernel_size=1)]
         return nn.Sequential(*layers)
 
+class ResNet18(nn.Module):
+    def __init__(self, num_classes=28):
+        super(ResNet18, self).__init__()
+        self.backbone = models.resnet18()
+        self.dim_red = nn.Conv2d(512, 64, (1,1))
+        self.classifier = nn.Linear(64, num_classes)
+    def forward(self, x, feature=False):
+        x = self.backbone.conv1(x)
+        x = self.backbone.bn1(x)
+        x = self.backbone.relu(x)
+        x = self.backbone.maxpool(x)
 
-def test():
-    net = VGG('VGG11')
-    x = torch.randn(2,3,32,32)
-    y = net(x)
-    print(y.size())
+        x = self.backbone.layer1(x)
+        x = self.backbone.layer2(x)
+        x = self.backbone.layer3(x)
+        x = self.backbone.layer4(x)
+
+        x = self.dim_red(x)
+        x = x.reshape(x.size(0), -1)
+        if feature:
+            return x
+        return x, self.classifier(x)
+
+
+def test(model, x):
+    net = model()
+    feature, y = net(x)
+    print(feature.size(), y.size())
+
+if __name__ == "__main__":
+    x = torch.randn(2, 3, 32, 32)
+    x1 = torch.randn(2, 3, 28, 28)
+    test(ResNet18, x)
+    test(VGG, x)
+    test(ConvNet, x1)
