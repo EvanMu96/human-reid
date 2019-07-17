@@ -58,7 +58,7 @@ def train_softmax_l2(model, criterion, optimizer, trainloader, use_gpu, epoch, n
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        for p in model.parmeters():
+        for p in model.parameters():
             l2loss += p.abs().sum()
         trainloss += loss.item() + l2loss
         
