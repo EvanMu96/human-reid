@@ -60,7 +60,7 @@ def train_softmax_l2(model, criterion, optimizer, trainloader, use_gpu, epoch, n
         optimizer.step()
         for p in model.parmeters():
             l2loss += p.abs().sum()
-        trainloss += loss.item()
+        trainloss += loss.item() + l2loss
         
         if batch_idx % 10 == 0:
             print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f'
