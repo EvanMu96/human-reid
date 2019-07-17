@@ -44,6 +44,28 @@ def train_softmax(model, criterion, optimizer, trainloader, use_gpu, epoch, num_
             print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f'
                     % (epoch, batch_idx, loss.item(), trainloss / (batch_idx + 1)))
 
+def train_softmax_l2(model, criterion, optimizer, trainloader, use_gpu, epoch, num_classes):
+    model.train()
+    model.feature = False
+    trainloss = 0
+    l2loss = 0
+    for batch_idx, (data, labels) in enumerate(trainloader):
+        if use_gpu:
+            data, labels = data.cuda(), labels.cuda()
+
+        _, outputs = model(data)
+        loss = criterion(outputs, labels)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        for p in model.parmeters():
+            l2loss += p.abs().sum()
+        trainloss += loss.item()
+        
+        if batch_idx % 10 == 0:
+            print(dt(), 'epoch=%d batch#%d batchloss=%.4f averLoss=%.4f'
+                    % (epoch, batch_idx, loss.item(), trainloss / (batch_idx + 1)))
+
 def train_centerloss(model, criterion_xent, criterion_cent, optimizer_model, optimizer_centloss, trainloader, use_gpu, epoch, coeff=0.005):
     model.train()
     model.feature = False
