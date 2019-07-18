@@ -141,10 +141,15 @@ class VGG(nn.Module):
         layers += [nn.Conv2d(512, 64, kernel_size=1)]
         return nn.Sequential(*layers)
 
-class ResNet18(nn.Module):
-    def __init__(self, num_classes=28):
-        super(ResNet18, self).__init__()
-        self.backbone = models.resnet18()
+class ResNet(nn.Module):
+    def __init__(self, num_classes=28, type="resnet18"):
+        super(ResNet, self).__init__()
+        if type=="resnet18":
+            self.backbone = models.resnet18()
+        elif type=="resnet50":
+            self.backbone = models.resnet50()
+        else:
+            self.backbone = models.resnet152()
         self.dim_red = nn.Conv2d(512, 64, (1,1))
         self.classifier = nn.Linear(64, num_classes)
         self.feature = False
