@@ -111,7 +111,7 @@ class VGG(nn.Module):
         self.classifier = nn.Linear(64, num_classes)
         
         # feature extraction Trigger
-        self.feature = None
+        self.feature = False
 
     def forward(self, x):
         out = self.features(x)
@@ -147,7 +147,8 @@ class ResNet18(nn.Module):
         self.backbone = models.resnet18()
         self.dim_red = nn.Conv2d(512, 64, (1,1))
         self.classifier = nn.Linear(64, num_classes)
-    def forward(self, x, feature=False):
+        self.feature = False
+    def forward(self, x):
         x = self.backbone.conv1(x)
         x = self.backbone.bn1(x)
         x = self.backbone.relu(x)
@@ -160,7 +161,7 @@ class ResNet18(nn.Module):
 
         x = self.dim_red(x)
         x = x.reshape(x.size(0), -1)
-        if feature:
+        if self.feature:
             return x
         return x, self.classifier(x)
 
