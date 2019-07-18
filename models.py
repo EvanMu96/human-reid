@@ -116,11 +116,11 @@ class VGG(nn.Module):
     def forward(self, x):
         out = self.features(x)
         out = out.view(out.size(0), -1)
-        out = self.reg(out)
+
         if self.feature:
             return out
         else:
-            return out, self.classifier(out)
+            return out, self.classifier(self.reg(out))
     
     def _make_layers(self, cfg):
         layers = []
@@ -151,6 +151,7 @@ class ResNet(nn.Module):
         else:
             self.backbone = models.resnet152()
         self.dim_red = nn.Conv2d(512, 64, (1,1))
+        self.reg = nn.Dropout(0.5)
         self.classifier = nn.Linear(64, num_classes)
         self.feature = False
     def forward(self, x):
@@ -168,7 +169,7 @@ class ResNet(nn.Module):
         x = x.reshape(x.size(0), -1)
         if self.feature:
             return x
-        return x, self.classifier(x)
+        return x, self.classifier(self.reg(x))
 
 
 def test(model, x):
@@ -179,6 +180,6 @@ def test(model, x):
 if __name__ == "__main__":
     x = torch.randn(2, 3, 32, 32)
     x1 = torch.randn(2, 3, 28, 28)
-    test(ResNet18, x)
+    test(ResNet, x)
     test(VGG, x)
     test(ConvNet, x1)
