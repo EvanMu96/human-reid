@@ -160,7 +160,23 @@ class CenterLoss(nn.Module):
         loss = diff.pow(2).sum(1).clamp(min=1e-12, max=1e+12).mean()
 
         return loss
-    
+class SlimLoss(nn.Module):
+        def __init__(self, num_classes=10574, feat_dim=64, use_gpu=True):
+        super(SlimLoss, self).__init__()
+        self.num_classes = num_classes
+        self.feat_dim = feat_dim
+        self.use_gpu = use_gpu
+        self.cossim = nn.CosineSimilarity
+
+        if self.use_gpu:
+            self.centers = nn.Parameter(torch.randn(self.num_classes, self.feat_dim).cuda())
+        else:
+            self.centers = nn.Parameter(torch.randn(self.num_classes, self.feat_dim))
+
+        def forward(self, x, labels):
+            batch_centers = self.centers[labels, :]
+            diff = 1-self.cossim(x, batch_centers)
+            loss = diff.pow(2).sum(1).clamp(min=1e-12, max=1e+12).mean()
 """
 Arcface ArcFace: Additive Angular Margin Loss for Deep Face Recognition
 """
